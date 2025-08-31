@@ -8,4 +8,5 @@ The Draw Steel System for Foundry Virtual Tabletop is an independent product pub
 
 TO INSTALL: Drop the draw-steel-monster-json-importer folder into your modules folder before launching FoundryVTT.  After launching the software, in should appear under the "Add-on modules" tab.  Launch your draw-steel world.  Then, activate the module under "Game Settings" and "Manage Modules".
 
-When you go to the "Create Actor" tab, there should be an "Import Monster" button at the bottom of the panel.  Click it and follow the instructions.  You must use the .json files from the Steel Compendium github.
+When you go to the "Create Actor" tab, there should be an "Import Monster" button at the bottom of the panel.  Click it and follow the instructions.  You must use the .json files from the Steel Compendium here https://steelcompendium.io/#bestiary.
+
