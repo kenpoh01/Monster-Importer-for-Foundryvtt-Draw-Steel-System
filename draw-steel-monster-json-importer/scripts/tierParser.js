@@ -127,7 +127,7 @@ export function buildEffectsFromTiers(tierText = "", highestCharacteristic = "no
           properties: [],
           potency
         };
-        console.log(`💥 Added damage for ${tier}:", effects.damage[tier]);
+        console.log(`💥 Added damage for ${tier}:`, effects.damage[tier]);
       }
 
       if (parsed.movement) {
@@ -139,7 +139,7 @@ export function buildEffectsFromTiers(tierText = "", highestCharacteristic = "no
           properties: [],
           potency
         };
-        console.log(`🧭 Added movement for ${tier}:", effects.forced[tier]);
+        console.log(`🧭 Added movement for ${tier}:`, effects.forced[tier]);
       }
 
       if (parsed.condition) {
@@ -155,7 +155,7 @@ export function buildEffectsFromTiers(tierText = "", highestCharacteristic = "no
             }
           }
         };
-        console.log(`🧠 Added applied condition for ${tier}:", effects.applied[tier]);
+        console.log(`🧠 Added applied condition for ${tier}:`, effects.applied[tier]);
       }
 
       if (parsed.narrative) {
@@ -164,14 +164,11 @@ export function buildEffectsFromTiers(tierText = "", highestCharacteristic = "no
           description: parsed.narrative,
           potency
         };
-        console.log(`🧾 Added narrative for ${tier}:", effects.special[tier]);
+        console.log(`🧾 Added narrative for ${tier}:`, effects.special[tier]);
       }
     }
   });
 
   console.log("✅ Final effects object:", JSON.stringify(effects, null, 2));
-  return effects;
-}
-```` null, 2));
   return effects;
 }
