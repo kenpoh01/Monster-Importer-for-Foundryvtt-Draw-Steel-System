@@ -1,59 +1,52 @@
+// tierParser.js
+import { parseDamage } from "./damageParser.js";
+import { parseCondition } from "./conditionParser.js";
+import { parseMovement } from "./movementParser.js";
+
 export function parseTierText(text = "") {
   const result = {
     value: 0,
     types: [],
     movement: null,
     condition: null,
-    potency: null
+    potency: null,
+    narrative: ""
   };
 
   const original = text;
   console.log("🔍 Parsing tier text:", original);
 
-  // 🔢 Damage value and type
-  const damageMatch = text.match(/(\d+)\s*(\w+)?\s*damage/i);
-  if (damageMatch) {
-    console.log("💥 Damage match:", damageMatch);
-    result.value = Number(damageMatch[1]);
-    const type = damageMatch[2]?.toLowerCase();
-    if (type && !["damage"].includes(type)) result.types.push(type);
-    text = text.replace(damageMatch[0], "");
+  // 🔥 Damage
+  const damage = parseDamage(text);
+  if (damage) {
+    result.value = damage.value;
+    result.types = damage.types;
+    text = text.replace(/(\d+)\s*\w*\s*damage/i, "");
   }
 
-  // 🧭 Movement
-  const moveMatch = text.match(/(slide|pull|push|shift)\s*(\d+)/i);
-  if (moveMatch) {
-    console.log("🧭 Movement match:", moveMatch);
+  // 🌀 Movement
+  const movement = parseMovement(text);
+  if (movement) {
     result.movement = {
-      name: moveMatch[1].toLowerCase(),
+      name: movement.name,
       type: "forced",
-      distance: Number(moveMatch[2]),
+      distance: movement.distance,
       img: null
     };
-    text = text.replace(moveMatch[0], "");
+    text = text.replace(/\b(slide|pull|push|shift)\s*\d+/i, "");
   }
 
-  // 🧠 Condition
-  const conditionMatch = text.match(/\b(bleeding|dazed|grabbed|frightened|prone|restrained|slowed|taunted|weakened)\b/i);
-  if (conditionMatch) {
-    console.log("🧠 Condition match:", conditionMatch);
-    result.condition = conditionMatch[1].toLowerCase();
-    text = text.replace(conditionMatch[0], "");
-  }
-
-  // ⚡ Potency trigger
-  const potencyMatch = text.match(/\b([marip])\s*<\s*(\d+)/i);
-  if (potencyMatch) {
-    console.log("⚡ Potency match:", potencyMatch);
-    result.potency = `${potencyMatch[1]} < ${potencyMatch[2]}`;
-    text = text.replace(potencyMatch[0], "");
-  }
-
-  // 🧾 Narrative fallback
-  const leftover = text.replace(/[\.;]/g, "").trim();
-  if (leftover.length > 0) {
-    console.log("🧾 Narrative leftover:", leftover);
-    result.narrative = leftover;
+  // ⚠️ Condition
+  const condition = parseCondition(text);
+  if (condition) {
+    result.condition = condition.condition;
+    result.potency = condition.potency;
+    result.narrative = condition.narrative;
+  } else {
+    const leftover = text.replace(/[\.;]/g, "").trim();
+    if (leftover.length > 0) {
+      result.narrative = leftover;
+    }
   }
 
   console.log("🧪 Final parsed tier:", JSON.stringify(result, null, 2));
@@ -101,74 +94,13 @@ export function parseTarget(targetText) {
   return { type, value };
 }
 
-export function buildEffectsFromTiers(tierText = "", highestCharacteristic = "none") {
-  const effects = {};
-  const chunks = tierText.includes(";") ? tierText.split(";").map(s => s.trim()) : [tierText.trim()];
-
-  console.log("🧱 Building effects from:", tierText);
-
-  chunks.forEach((chunk, index) => {
-    console.log(`🔹 Parsing chunk ${index + 1}:`, chunk);
-    const parsed = parseTierText(chunk);
-    const potencyMap = ["@potency.weak", "@potency.average", "@potency.strong"];
-
-    for (let i = 0; i < 3; i++) {
-      const tier = `tier${i + 1}`;
-      const potency = {
-        value: potencyMap[i],
-        characteristic: highestCharacteristic
-      };
-
-      if (parsed.value > 0) {
-        effects.damage = effects.damage || {};
-        effects.damage[tier] = {
-          value: (parsed.value * (i + 1)).toString(),
-          types: parsed.types,
-          properties: [],
-          potency
-        };
-        console.log(`💥 Added damage for ${tier}:`, effects.damage[tier]);
-      }
-
-      if (parsed.movement) {
-        effects.forced = effects.forced || {};
-        effects.forced[tier] = {
-          movement: [parsed.movement.name],
-          distance: (parsed.movement.distance * (i + 1)).toString(),
-          display: "{{forced}}",
-          properties: [],
-          potency
-        };
-        console.log(`🧭 Added movement for ${tier}:`, effects.forced[tier]);
-      }
-
-      if (parsed.condition) {
-        effects.applied = effects.applied || {};
-        effects.applied[tier] = {
-          display: i === 0 ? `{{potency}} ${parsed.condition} (save ends)` : "",
-          potency,
-          effects: {
-            [parsed.condition]: {
-              condition: "failure",
-              end: "save",
-              properties: []
-            }
-          }
-        };
-        console.log(`🧠 Added applied condition for ${tier}:`, effects.applied[tier]);
-      }
-
-      if (parsed.narrative) {
-        effects.special = effects.special || {};
-        effects.special[tier] = {
-          description: parsed.narrative,
-          potency
-        };
-        console.log(`🧾 Added narrative for ${tier}:`, effects.special[tier]);
-      }
-    }
-  });
-
-  console.log("✅ Final effects object:", JSON.stringify(effects, null, 2));
-  return effects;
+export function mapCharacteristic(letter) {
+  const map = {
+    m: "might",
+    a: "agility",
+    r: "reason",
+    i: "intuition",
+    p: "presence"
+  };
+  return map[letter?.toLowerCase()] || "none";
 }
