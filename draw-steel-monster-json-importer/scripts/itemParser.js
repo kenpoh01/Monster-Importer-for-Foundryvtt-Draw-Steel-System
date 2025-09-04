@@ -1,14 +1,45 @@
 import { parseTierText, parseTarget, mapCharacteristic } from "./tierParser.js";
 
-function normalizeType(type = "") {
+function normalizeType(type = "", cost = "") {
   const map = {
     "main action": "main",
-    "main": "main",
     "maneuver": "maneuver",
-    "reaction": "reaction",
-    "free": "free"
+    "free maneuver": "freeManeuver",
+    "triggered action": "triggered",
+    "free triggered action": "freeTriggered",
+    "no action": "none"
   };
-  return map[type.toLowerCase()] || "main";
+
+  const normalized = map[type.toLowerCase().trim()];
+  if (normalized) return normalized;
+
+  if (cost?.toLowerCase().includes("villain action")) return "villain";
+
+  return "main"; // fallback
+}
+
+function getImageForType(type, itemType) {
+  const images = {
+    ability: {
+      main: "icons/skills/melee/strike-polearm-glowing-white.webp",
+      maneuver: "icons/magic/air/air-pressure-shield-blue.webp",
+      triggered: "icons/skills/movement/arrow-upward-yellow.webp",
+      none: "icons/magic/unholy/silhouette-robe-evil-power.webp",
+      villain: "icons/magic/death/skull-horned-worn-fire-blue.webp"
+    },
+    feature: {
+      withCaptain: "icons/skills/social/intimidation-impressing.webp",
+      default: "icons/creatures/unholy/demon-hairy-winged-pink.webp"
+    }
+  };
+
+  if (itemType === "feature") {
+    return type === "with-captain"
+      ? images.feature.withCaptain
+      : images.feature.default;
+  }
+
+  return images.ability[type] || "";
 }
 
 export function parseItems(traits = [], abilities = [], rawData = {}) {
@@ -30,7 +61,7 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
     items.push({
       name: "With Captain",
       type: "feature",
-      img: "icons/skills/social/intimidation-impressing.webp",
+      img: getImageForType("with-captain", "feature"),
       system: {
         description: {
           value: `<p><strong>With Captain:</strong> ${rawData.with_captain}</p>`,
@@ -61,7 +92,7 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
     items.push({
       name: trait.name || `Trait ${index + 1}`,
       type: "feature",
-      img: "icons/svg/anchor.svg",
+      img: getImageForType("default", "feature"),
       system: {
         description: {
           value: trait.effects?.map(e => `<p>${e.effect}</p>`).join("") || "",
@@ -83,7 +114,6 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
     const narrativeEffect = ability.effects?.find(e => e.effect);
 
     const effects = {};
-
     const effectGroups = {};
 
     [damageEffect?.t1, damageEffect?.t2, damageEffect?.t3].forEach((text, i) => {
@@ -183,6 +213,8 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
     const isRanged = ability.keywords?.some(k => k.toLowerCase() === "ranged") ||
                      ability.distance?.toLowerCase().includes("ranged");
 
+    const normalizedType = normalizeType(ability.type, ability.cost);
+
     const finalEffects = {};
     Object.values(effectGroups).forEach(e => {
       finalEffects[e._id] = e;
@@ -191,9 +223,9 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
     items.push({
       name: ability.name || `Ability ${index + 1}`,
       type: "ability",
-      img: "icons/skills/melee/strike-polearm-glowing-white.webp",
+      img: getImageForType(normalizedType, "ability"),
       system: {
-        type: normalizeType(ability.type),
+        type: normalizedType,
         category: ability.category?.toLowerCase() || "signature",
         keywords: ability.keywords?.map(k => k.toLowerCase()) || [],
         distance: {
@@ -210,7 +242,7 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
           effects: finalEffects
         },
         effect: {
-          before: "",
+          before: narrativeEffect?.effect ? `<p>${narrativeEffect.effect}</p>` : "",
           after: ""
         },
         spend: {
@@ -226,7 +258,7 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
         _dsid: ability.name?.toLowerCase().replace(/\s+/g, "-") || `ability-${index}`,
         story: "",
         resource: null,
-        trigger: ""
+        trigger: ability.trigger || ""
       },
       effects: [],
       folder: null,
