@@ -15,7 +15,7 @@ function normalizeType(type = "", cost = "") {
 
   if (cost?.toLowerCase().includes("villain action")) return "villain";
 
-  return "main"; // fallback
+  return "main";
 }
 
 function getImageForType(type, itemType) {
@@ -40,6 +40,53 @@ function getImageForType(type, itemType) {
   }
 
   return images.ability[type] || "";
+}
+
+function normalizeDistance(raw = "") {
+  const text = raw.toLowerCase().trim();
+
+  if (text.includes("burst")) {
+    const primary = Number(text.match(/\d+/)?.[0]) || 1;
+    return { type: "burst", primary };
+  }
+
+  if (text.includes("cube")) {
+    const [primary, secondary] = text.match(/\d+/g)?.map(Number) || [1, 1];
+    return { type: "cube", primary, secondary };
+  }
+
+  if (text.includes("line")) {
+    const [primary, secondary, tertiary] = text.match(/\d+/g)?.map(Number) || [1, 1, 1];
+    return { type: "line", primary, secondary, tertiary };
+  }
+
+  if (text.includes("aura")) {
+    const primary = Number(text.match(/\d+/)?.[0]) || 1;
+    return { type: "aura", primary };
+  }
+
+  if (text.includes("melee or ranged")) {
+    return { type: "meleeRanged", primary: 1 };
+  }
+
+  if (text.includes("ranged")) {
+    const primary = Number(text.match(/\d+/)?.[0]) || 1;
+    return { type: "ranged", primary };
+  }
+
+  if (text.includes("melee")) {
+    return { type: "melee", primary: 1 };
+  }
+
+  if (text.includes("self")) {
+    return { type: "self" };
+  }
+
+  if (text.includes("special")) {
+    return { type: "special" };
+  }
+
+  return { type: "melee", primary: 1 };
 }
 
 export function parseItems(traits = [], abilities = [], rawData = {}) {
@@ -109,9 +156,19 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
     });
   });
 
-  abilities.forEach((ability, index) => {
+     abilities.forEach((ability, index) => {
     const damageEffect = ability.effects?.find(e => e.roll);
     const narrativeEffect = ability.effects?.find(e => e.effect);
+
+    const costText = ability.cost?.toLowerCase() || "";
+    const isMalice = costText.includes("malice");
+    const maliceValue = isMalice ? Number(costText.match(/\d+/)?.[0]) || null : null;
+
+    const category = isMalice
+      ? "heroic"
+      : ability.category?.toLowerCase() || "signature";
+
+    const resource = isMalice ? maliceValue : null;
 
     const effects = {};
     const effectGroups = {};
@@ -210,10 +267,8 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
       });
     });
 
-    const isRanged = ability.keywords?.some(k => k.toLowerCase() === "ranged") ||
-                     ability.distance?.toLowerCase().includes("ranged");
-
     const normalizedType = normalizeType(ability.type, ability.cost);
+    const distance = normalizeDistance(ability.distance || "");
 
     const finalEffects = {};
     Object.values(effectGroups).forEach(e => {
@@ -226,12 +281,9 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
       img: getImageForType(normalizedType, "ability"),
       system: {
         type: normalizedType,
-        category: ability.category?.toLowerCase() || "signature",
+        category,
         keywords: ability.keywords?.map(k => k.toLowerCase()) || [],
-        distance: {
-          type: isRanged ? "ranged" : "melee",
-          primary: Number(ability.distance?.match(/\d+/)?.[0]) || 1
-        },
+        distance,
         target: parseTarget(ability.target),
         damageDisplay: "melee",
         power: {
@@ -257,7 +309,7 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
         },
         _dsid: ability.name?.toLowerCase().replace(/\s+/g, "-") || `ability-${index}`,
         story: "",
-        resource: null,
+        resource,
         trigger: ability.trigger || ""
       },
       effects: [],
