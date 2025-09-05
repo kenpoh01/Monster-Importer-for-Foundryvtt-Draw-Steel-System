@@ -20,6 +20,8 @@ export function parseMonsterCore(rawData) {
   // Movement types
   const movementTypes = rawData.movement?.split(",").map(m => m.trim().toLowerCase()) || [];
   const filteredMovement = movementTypes.filter(m => validMovementTypes.includes(m));
+  const finalMovement = filteredMovement.length ? filteredMovement : ["walk"];
+
 
   // Keywords
   const filteredKeywords = rawData.ancestry?.map(k => k.toLowerCase()).filter(k => validKeywords.includes(k)) || [];
@@ -73,7 +75,7 @@ const sizeLetter = sizeLetterMatch ? sizeLetterMatch[0].toUpperCase() : "M";
       },
       movement: {
         value: rawData.speed ?? 0,
-        types: filteredMovement,
+        types: finalMovement,
         hover: false,
         disengage: 1
       },
