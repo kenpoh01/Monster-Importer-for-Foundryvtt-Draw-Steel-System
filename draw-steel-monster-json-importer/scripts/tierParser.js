@@ -49,14 +49,14 @@ export function parseTierText(text = "") {
     }
   }
 
-  console.log("🧪 Final parsed tier:", JSON.stringify(result, null, 2));
+
   return result;
 }
 
 export function parseTarget(targetText) {
   if (!targetText || typeof targetText !== "string") return { type: "special", value: null };
 
-  console.log("🎯 Parsing target:", targetText);
+
   const numberWords = {
     one: 1, two: 2, three: 3, four: 4, five: 5,
     six: 6, seven: 7, eight: 8, nine: 9, ten: 10
@@ -67,14 +67,14 @@ export function parseTarget(targetText) {
 
   for (const [word, num] of Object.entries(numberWords)) {
     if (lower.includes(word)) {
-      console.log("🔢 Found number word:", word);
+
       value = num;
       break;
     }
   }
 
   if (lower.includes("all") || lower.includes("each") || lower.includes("every")) {
-    console.log("🔢 Found universal target keyword");
+
     value = null;
   }
 
@@ -90,7 +90,6 @@ export function parseTarget(targetText) {
   else if (lower.includes("self ally")) type = "selfAlly";
   else if (lower.includes("self")) type = "self";
 
-  console.log("🎯 Final target type:", type, "value:", value);
   return { type, value };
 }
 

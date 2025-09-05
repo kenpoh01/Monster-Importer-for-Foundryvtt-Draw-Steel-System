@@ -294,8 +294,8 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
           effects: finalEffects
         },
         effect: {
-          before: narrativeEffect?.effect ? `<p>${narrativeEffect.effect}</p>` : "",
-          after: ""
+          before: "",
+          after: narrativeEffect?.effect ? `<p>${narrativeEffect.effect}</p>` : ""
         },
         spend: {
           text: narrativeEffect?.cost || "",
