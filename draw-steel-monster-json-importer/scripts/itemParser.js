@@ -89,6 +89,21 @@ function normalizeDistance(raw = "") {
   return { type: "melee", primary: 1 };
 }
 
+function determineCategory(ability) {
+  const costText = ability.cost?.toLowerCase() || "";
+  const typeText = ability.type?.toLowerCase() || "";
+  const rawCategory = ability.category?.toLowerCase();
+
+  if (costText.includes("signature")) return "signature";
+  if (costText.includes("malice")) return "heroic";
+  if (typeText.includes("villain")) return "villain";
+  if (rawCategory) return rawCategory;
+
+  return "heroic";
+}
+
+
+
 export function parseItems(traits = [], abilities = [], rawData = {}) {
   const items = [];
 
@@ -156,7 +171,7 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
     });
   });
 
-     abilities.forEach((ability, index) => {
+  abilities.forEach((ability, index) => {
     const damageEffect = ability.effects?.find(e => e.roll);
     const narrativeEffect = ability.effects?.find(e => e.effect);
 
@@ -164,10 +179,7 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
     const isMalice = costText.includes("malice");
     const maliceValue = isMalice ? Number(costText.match(/\d+/)?.[0]) || null : null;
 
-    const category = isMalice
-      ? "heroic"
-      : ability.category?.toLowerCase() || "signature";
-
+    const category = determineCategory(ability);
     const resource = isMalice ? maliceValue : null;
 
     const effects = {};
