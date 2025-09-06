@@ -99,7 +99,7 @@ function determineCategory(ability) {
   if (typeText.includes("villain")) return "villain";
   if (rawCategory) return rawCategory;
 
-  return "heroic";
+  return "";
 }
 
 
