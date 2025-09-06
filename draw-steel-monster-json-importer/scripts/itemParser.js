@@ -91,12 +91,14 @@ function normalizeDistance(raw = "") {
 
 function determineCategory(ability) {
   const costText = ability.cost?.toLowerCase() || "";
+  console.log("Ability Cost:", costText);
   const typeText = ability.type?.toLowerCase() || "";
+  console.log("Ability Type:", typeText);
   const rawCategory = ability.category?.toLowerCase();
 
   if (costText.includes("signature")) return "signature";
   if (costText.includes("malice")) return "heroic";
-  if (typeText.includes("villain")) return "villain";
+  if (costText.includes("villain")) return "villain";
   if (rawCategory) return rawCategory;
 
   return "";
