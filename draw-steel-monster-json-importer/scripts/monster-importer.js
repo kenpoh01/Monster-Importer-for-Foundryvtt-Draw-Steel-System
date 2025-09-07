@@ -1,5 +1,6 @@
 import { parseMonsterCore } from "./monsterParser.js";
 import { parseItems } from "./itemParser.js";
+import { parseMaliceText } from "./maliceParser.js";
 
 class MonsterImportUI extends Application {
   static get defaultOptions() {
@@ -38,74 +39,97 @@ class MonsterImportUI extends Application {
     });
   }
 
-async _importMonster() {
-  console.log("✅ Batch import triggered.");
+  async _importMonster() {
+    console.log("✅ Batch import triggered.");
 
-  const fileInput = document.querySelector("#monster-file");
-  const folderName = document.querySelector("#monster-folder")?.value?.trim();
-  const files = Array.from(fileInput?.files || []);
+    const fileInput = document.querySelector("#monster-file");
+    const folderName = document.querySelector("#monster-folder")?.value?.trim();
+    const maliceText = document.querySelector("#malice-text")?.value?.trim();
+    const files = Array.from(fileInput?.files || []);
 
-  if (!fileInput || files.length === 0) {
-  ui.notifications.warn("No monster files selected. Please choose one or more .json files.");
-  console.warn("⚠️ Import aborted: No files selected.");
-  return;
-}
+    if (!fileInput || files.length === 0) {
+      ui.notifications.warn("No monster files selected. Please choose one or more .json files.");
+      console.warn("⚠️ Import aborted: No files selected.");
+      return;
+    }
 
-
-
-  // Create or find folder
-  let folder;
-  if (folderName) {
-    folder = game.folders.find(f => f.name === folderName && f.type === "Actor");
-    if (!folder) {
+    // Parse malice abilities if provided
+    let maliceTypeKey = "";
+    let maliceAbilities = [];
+    if (maliceText) {
       try {
-        folder = await Folder.create({
-          name: folderName,
-          type: "Actor",
-          parent: null,
-          color: "#4b4a44"
-        });
-        console.log(`✅ Created folder: ${folderName}`);
+        const parsed = parseMaliceText(maliceText);
+        maliceTypeKey = parsed.typeKey.toLowerCase();
+        maliceAbilities = parsed.items;
+        console.log(`✅ Parsed ${maliceAbilities.length} malice abilities for type: ${maliceTypeKey}`);
       } catch (err) {
-        console.error("❌ Folder creation failed:", err);
-        ui.notifications.error("Could not create folder.");
-        return;
+        console.error("❌ Failed to parse malice text:", err);
+        ui.notifications.warn("Could not parse Malice Feature text.");
       }
     }
-  }
 
-  for (const file of files) {
-    try {
-      const content = await file.text();
-      const rawData = JSON.parse(content);
-      const actorData = parseMonsterCore(rawData);
-      actorData.items = parseItems(rawData.traits || [], rawData.abilities || [], rawData);
-
-
-      if (!actorData.name || !actorData.system || !Array.isArray(actorData.items)) {
-        console.warn(`⚠️ Skipped malformed file: ${file.name}`);
-        continue;
+    // Create or find folder
+    let folder;
+    if (folderName) {
+      folder = game.folders.find(f => f.name === folderName && f.type === "Actor");
+      if (!folder) {
+        try {
+          folder = await Folder.create({
+            name: folderName,
+            type: "Actor",
+            parent: null,
+            color: "#4b4a44"
+          });
+          console.log(`✅ Created folder: ${folderName}`);
+        } catch (err) {
+          console.error("❌ Folder creation failed:", err);
+          ui.notifications.error("Could not create folder.");
+          return;
+        }
       }
-
-      const actor = await Actor.create({
-        ...actorData,
-        folder: folder?.id || null
-      });
-
-      if (actor) {
-        console.log(`✅ Imported: ${actor.name}`);
-        ui.notifications.info(`Imported: ${actor.name}`);
-      }
-    } catch (err) {
-      console.error(`❌ Failed to import ${file.name}:`, err);
-      ui.notifications.warn(`Failed to import ${file.name}`);
     }
+
+    for (const file of files) {
+      try {
+        const content = await file.text();
+        const rawData = JSON.parse(content);
+        const actorData = parseMonsterCore(rawData);
+        actorData.items = parseItems(rawData.traits || [], rawData.abilities || [], rawData);
+
+        // Attach file name for matching
+        actorData._fileName = file.name.toLowerCase();
+
+        // Inject malice abilities if matched
+        const nameMatch = actorData.name?.toLowerCase().includes(maliceTypeKey);
+        const fileMatch = actorData._fileName?.includes(maliceTypeKey);
+        if (maliceTypeKey && (nameMatch || fileMatch)) {
+          actorData.items.push(...maliceAbilities);
+          console.log(`🧪 Injected ${maliceAbilities.length} malice abilities into ${actorData.name}`);
+        }
+
+        if (!actorData.name || !actorData.system || !Array.isArray(actorData.items)) {
+          console.warn(`⚠️ Skipped malformed file: ${file.name}`);
+          continue;
+        }
+
+        const actor = await Actor.create({
+          ...actorData,
+          folder: folder?.id || null
+        });
+
+        if (actor) {
+          console.log(`✅ Imported: ${actor.name}`);
+          ui.notifications.info(`Imported: ${actor.name}`);
+        }
+      } catch (err) {
+        console.error(`❌ Failed to import ${file.name}:`, err);
+        ui.notifications.warn(`Failed to import ${file.name}`);
+      }
+    }
+
+    this.close();
   }
-
-  this.close();
 }
-}
-
 
 // Inject button into Actor Directory
 Hooks.on("renderActorDirectory", (app, html, data) => {
