@@ -14,7 +14,7 @@ export function parseTierText(text = "") {
   };
 
   const original = text;
-  console.log("🔍 Parsing tier text:", original);
+
 
   // 🔥 Damage
   const damage = parseDamage(text);
