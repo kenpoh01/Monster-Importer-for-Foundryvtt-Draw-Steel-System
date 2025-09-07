@@ -16,5 +16,9 @@ When you go to the "Create Actor" tab, there should be an "Import Monster" butto
 
 
 
-To import Malice Features, copy and paste the Malice stat block, including the header, from the pdf into the textblock under the "choose file" button.  The header is used to make sure only creatures with the same keyword (ex. Goblin) get the abilities and not other creatures that might be in the folder with them (ex. War Spider).
+To import Malice Features, copy and paste the Malice stat block, including the header, from the pdf into the text block under the "choose file" button.  The header is used to make sure only creatures with the same keyword (ex. Goblin) get the abilities and not other creatures that might be in the folder with them (ex. War Spider).
+
+
+
+NOTE: To improve formatting of paragraphs in the Malice Features, you can edit the pasted text to get rid of unwanted line breaks.  You can see these by changing the size of the UI window and look for lines that don't dynamically change size when they should.
 

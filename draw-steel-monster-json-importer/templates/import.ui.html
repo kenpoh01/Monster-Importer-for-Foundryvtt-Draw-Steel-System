@@ -11,8 +11,17 @@
 
   <div class="form-group">
     <label for="malice-text">Paste Malice Feature Text</label>
-    <textarea id="malice-text" name="malice-text" rows="8" placeholder="Paste raw malice feature text here..."></textarea>
-    <small>Supports plain text blocks with potency tiers</small>
+
+    <div class="malice-instruction" style="margin-bottom: 0.5em; font-size: 0.95em; color: #444;">
+      <strong>Please include the entire Malice stat block</strong>, including the header, copy and pasted from the PDF. NOTE: deleting unwanted line breaks in paragraphs will improve formatting.
+    </div>
+
+    <textarea
+      id="malice-text"
+      name="malice-text"
+      rows="8"
+      style="width: 100%; resize: vertical; font-family: monospace;"
+      placeholder="Paste raw malice feature text here..."></textarea>
   </div>
 
   <button type="button" id="import-button" class="dialog-button">Import</button>

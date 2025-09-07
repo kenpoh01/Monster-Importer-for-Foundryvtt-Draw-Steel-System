@@ -17,21 +17,35 @@
   color: #fff;
 }
 
+/* Import Dialog Container */
+#monster-importer {
+  resize: both;
+  overflow: auto;
+  min-width: 600px;
+  min-height: 400px;
+}
+
 /* Import Dialog Form */
 #monster-importer form {
   padding: 10px;
 }
 
+/* Form Group Layout */
 #monster-importer .form-group {
   margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
 }
 
+/* File Input Styling */
 #monster-importer input[type="file"] {
   width: 100%;
   padding: 5px;
   font-size: 14px;
 }
 
+/* Dialog Button Styling */
 #monster-importer .dialog-button {
   margin-top: 10px;
   width: 100%;
@@ -48,3 +62,18 @@
   background-color: #357ab8;
 }
 
+/* Textarea Styling */
+#monster-importer textarea {
+  width: 100%;
+  height: 100%;
+  resize: none;
+  font-family: monospace;
+  box-sizing: border-box;
+}
+
+/* Instruction Text */
+.malice-instruction {
+  margin-bottom: 0.5em;
+  font-size: 0.95em;
+  color: #444;
+}

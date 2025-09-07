@@ -21,6 +21,28 @@ export function parseMaliceText(rawText) {
       return;
     }
 
+
+if (line.startsWith("e ") && current) {
+  const raw = line.slice(2).trim();
+
+  // Split on "x" or "×" with optional spacing
+  const parts = raw.split(/\s*[x×]\s*/i);
+
+  if (parts.length === 2) {
+    const distanceRaw = parts[0].trim().toLowerCase();
+    const targetRaw = parts[1].trim().toLowerCase();
+
+    current.system.distance.type = distanceRaw;
+    current.system.target.type = targetRaw;
+  }
+
+  return;
+}
+
+
+
+
+
     if (abilityHeaderRegex.test(line)) {
       if (current) {
         if (collectingTier && currentTier) {
