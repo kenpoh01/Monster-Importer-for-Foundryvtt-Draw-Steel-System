@@ -1,4 +1,9 @@
 import { parseDamage } from "./damageParser.js";
+import { parseDistanceLine } from "./distanceParser.js";
+import { parseTarget } from "./tierParser.js";
+import { enrichNarrative } from "./narrativeUtils.js";
+import { finalizeEffectTable } from "./effectTableBuilder.js";
+
 
 export function parseMaliceText(rawText) {
   const lines = rawText.split("\n").map(l => l.trim());
@@ -13,7 +18,7 @@ export function parseMaliceText(rawText) {
   let currentTier = "";
   let tierBuffer = [];
 
-  const abilityHeaderRegex = /^[a-z]\s+.+?\s+\d+\s+malice$/i;
+  const abilityHeaderRegex = /^[a-z]\s+.+?(?:\s+\d+\s+malice|\s+signature ability)$/i;
 
   lines.forEach((line, i) => {
     if (i === 0 && /malice features/i.test(line)) {
@@ -21,27 +26,14 @@ export function parseMaliceText(rawText) {
       return;
     }
 
-
-if (line.startsWith("e ") && current) {
-  const raw = line.slice(2).trim();
-
-  // Split on "x" or "×" with optional spacing
-  const parts = raw.split(/\s*[x×]\s*/i);
-
-  if (parts.length === 2) {
-    const distanceRaw = parts[0].trim().toLowerCase();
-    const targetRaw = parts[1].trim().toLowerCase();
-
-    current.system.distance.type = distanceRaw;
-    current.system.target.type = targetRaw;
-  }
-
-  return;
-}
-
-
-
-
+    if (line.startsWith("e ") && current) {
+      const parsed = parseDistanceLine(line);
+      if (parsed) {
+        current.system.distance = parsed.distance;
+        current.system.target = parsed.target;
+      }
+      return;
+    }
 
     if (abilityHeaderRegex.test(line)) {
       if (current) {
@@ -62,14 +54,24 @@ if (line.startsWith("e ") && current) {
         afterTierStarted = false;
       }
 
-      const match = line.match(/^[a-z]\s+(.*?)\s+(\d+)\s+malice/i);
-      if (!match) return;
+      const maliceMatch = line.match(/^[a-z]\s+(.*?)\s+(\d+)\s+malice/i);
+      const signatureMatch = line.match(/^[a-z]\s+(.*?)\s+signature ability/i);
 
-      const name = match[1].trim();
-      const cost = parseInt(match[2]);
+      let name = "";
+      let cost = 0;
+
+      if (maliceMatch) {
+        name = maliceMatch[1].trim();
+        cost = parseInt(maliceMatch[2]);
+      } else if (signatureMatch) {
+        name = signatureMatch[1].trim();
+        cost = 0;
+      } else {
+        return;
+      }
 
       const nextLine = lines[i + 1]?.trim();
-      const typeMatch = nextLine?.match(/^(.+?)\s+(Maneuver|Attack|Effect|Reaction|Action|Ability|Spell|Power)\.?$/i);
+      const typeMatch = nextLine?.match(/^(.+?)\s+(Maneuver|Attack|Effect|Reaction|Action|Ability|Spell|Power|Main action)$/i);
 
       const keywords = [];
       let type = "special";
@@ -158,9 +160,14 @@ if (line.startsWith("e ") && current) {
     }
 
     if (afterTierStarted && current) {
-      postTierLines.push(line);
-      return;
-    }
+  if (/^effect:/i.test(line)) {
+    const effectText = line.replace(/^effect:/i, "").trim();
+    current.system.effect.after += `<p>${enrichNarrative(effectText)}</p>`;
+  } else {
+    postTierLines.push(line);
+  }
+  return;
+}
 
     if (current) {
       current.system.effect.before += `<p>${enrichNarrative(line)}</p>`;
@@ -184,116 +191,4 @@ if (line.startsWith("e ") && current) {
     typeKey,
     items
   };
-}
-
-function enrichNarrative(text) {
-  const collapsed = text.replace(/\s*\n\s*/g, " ").replace(/\s{2,}/g, " ").trim();
-
-  const withDamage = collapsed.replace(/(\d+)\s*(\w+)?\s*damage/gi, (_, value, type) => {
-    const dmgType = type?.toLowerCase();
-    const enriched = dmgType && dmgType !== "damage"
-      ? `[[/damage ${value} ${dmgType}]] damage`
-      : `[[/damage ${value}]] damage`;
-    return enriched;
-  });
-
-  const skillList = ["Might", "Intuition", "Agility", "Reason", "Presence"];
-  const skillRegex = new RegExp(`\\b(${skillList.join("|")})\\s+test\\b`, "gi");
-
-  const withSkills = withDamage.replace(skillRegex, (_, skill) => {
-    return `<span style="text-decoration:underline"><strong>${skill} test</strong></span>`;
-  });
-
-  const skillInitials = ["m", "i", "a", "r", "p"];
-  const skillRangeRegex = new RegExp(`\\b([${skillInitials.join("")}])<([0-9]+)]`, "gi");
-
-  const withSkillRanges = withSkills.replace(skillRangeRegex, (_, letter, num) => {
-    return `${letter.toUpperCase()}<${num}`;
-  });
-
-  return withSkillRanges;
-}
-
-function convertTierLabel(tierChar) {
-  switch (tierChar) {
-    case "á": case "1": return "11 or less";
-    case "é": case "2": return "12-16";
-    case "í": case "3": return "17+";
-    default: return tierChar;
-  }
-}
-
-function parseDuration(text) {
-  const lower = text.toLowerCase();
-
-  if (/\(save ends\)/i.test(lower)) {
-    return { end: "save", rounds: null, roll: "1d10 + @combat.save.bonus" };
-  }
-
-  if (/until the end of the round/.test(lower)) {
-    return { end: "round", rounds: 1, roll: "" };
-  }
-
-  if (/until the end of the turn/.test(lower) || /\(eot\)/i.test(lower)) {
-    return { end: "turn", rounds: 1, roll: "" };
-  }
-
-  if (/until the end of the encounter/.test(lower) || /until .* disappears/.test(lower)) {
-    return { end: "encounter", rounds: null, roll: "" };
-  }
-
-  return { end: "turn", rounds: 1, roll: "" };
-}
-
-function finalizeEffectTable(item, tierLines) {
-  if (!tierLines.length) return;
-
-  let table = `<table><tbody>`;
-  const activeEffects = [];
-
-  tierLines.forEach(line => {
-    const match = line.match(/^([123áéí])\s+(.*)/);
-    if (!match) return;
-
-    const tier = match[1];
-    const rawText = match[2].trim();
-    const enriched = enrichNarrative(rawText);
-    const label = convertTierLabel(tier);
-
-    table += `<tr><td data-colwidth="98"><p>${label}</p></td><td><p>${enriched}</p></td></tr>`;
-
-    const conditionMatch = enriched.match(/\b(weakened|restrained|frightened|bleeding|slowed|taunted|dazed)\b/i);
-    if (conditionMatch) {
-      const durationData = parseDuration(enriched);
-
-      activeEffects.push({
-        name: conditionMatch[1].charAt(0).toUpperCase() + conditionMatch[1].slice(1),
-        img: "icons/svg/downgrade.svg",
-        origin: null,
-        transfer: false,
-        type: "base",
-        system: {
-          end: { type: durationData.end, roll: durationData.roll }
-        },
-        changes: [],
-        disabled: false,
-        duration: { rounds: durationData.rounds },
-        description: "",
-        tint: "#ffffff",
-        statuses: [conditionMatch[1].toLowerCase()],
-        sort: 0,
-        flags: {},
-        _stats: {
-          coreVersion: "13.347",
-          systemId: "draw-steel",
-          systemVersion: "0.8.0",
-          lastModifiedBy: null
-        }
-      });
-    }
-  });
-
-  table += `</tbody></table>`;
-  item.system.effect.before += table;
-  item.effects.push(...activeEffects);
 }
