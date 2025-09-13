@@ -155,9 +155,12 @@ export function parseMaliceText(rawText) {
       }
     }
 
-    if (current && !collectingTier && /^[^a-z]/i.test(line)) {
-      afterTierStarted = true;
-    }
+const tierLineMatch = line.match(/^([123áéí])\s+/);
+if (current && !collectingTier && tierLineMatch) {
+  afterTierStarted = true;
+}
+
+
 
     if (afterTierStarted && current) {
   if (/^effect:/i.test(line)) {
