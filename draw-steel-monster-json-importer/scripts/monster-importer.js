@@ -61,7 +61,6 @@ class MonsterImportUI extends Application {
         const parsed = parseMaliceText(maliceText);
         maliceTypeKey = parsed.typeKey.toLowerCase();
         maliceAbilities = parsed.items;
-        console.log(`✅ Parsed ${maliceAbilities.length} malice abilities for type: ${maliceTypeKey}`);
       } catch (err) {
         console.error("❌ Failed to parse malice text:", err);
         ui.notifications.warn("Could not parse Malice Feature text.");
@@ -100,12 +99,9 @@ class MonsterImportUI extends Application {
         actorData._fileName = file.name.toLowerCase();
 
         // Inject malice abilities if matched
-        const nameMatch = actorData.name?.toLowerCase().includes(maliceTypeKey);
-        const fileMatch = actorData._fileName?.includes(maliceTypeKey);
-        if (maliceTypeKey && (nameMatch || fileMatch)) {
-          actorData.items.push(...maliceAbilities);
-          console.log(`🧪 Injected ${maliceAbilities.length} malice abilities into ${actorData.name}`);
-        }
+		if (maliceAbilities.length > 0) {
+			actorData.items.push(...maliceAbilities);
+		}
 
         if (!actorData.name || !actorData.system || !Array.isArray(actorData.items)) {
           console.warn(`⚠️ Skipped malformed file: ${file.name}`);

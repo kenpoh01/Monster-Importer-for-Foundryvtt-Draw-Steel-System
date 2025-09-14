@@ -3,7 +3,8 @@ import { parseDistanceLine } from "./distanceParser.js";
 import { parseTarget } from "./tierParser.js";
 import { enrichNarrative } from "./narrativeUtils.js";
 import { finalizeEffectTable } from "./effectTableBuilder.js";
-
+import { parseHeaderLine } from "./headerParser.js";
+import { parseKeywordLine, isNarrativeLine } from "./keywordParser.js";
 
 export function parseMaliceText(rawText) {
   const lines = rawText.split("\n").map(l => l.trim());
@@ -18,24 +19,48 @@ export function parseMaliceText(rawText) {
   let currentTier = "";
   let tierBuffer = [];
 
+  let narrativeBuffer = [];
+
   const abilityHeaderRegex = /^[a-z]\s+.+?(?:\s+\d+\s+malice|\s+signature ability)$/i;
 
-  lines.forEach((line, i) => {
+  function flushNarrativeBuffer(target = "before", force = false) {
+    if (!current || narrativeBuffer.length === 0) return;
+
+    const joined = narrativeBuffer.join(" ");
+    const endsWithSentence = /[.!?]["']?$/.test(joined.trim());
+
+    if (force || endsWithSentence) {
+      current.system.effect[target] += `<p>${enrichNarrative(joined.trim())}</p>`;
+      narrativeBuffer = [];
+    }
+  }
+
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+
     if (i === 0 && /malice features/i.test(line)) {
       typeKey = line.split(" ")[0].trim();
-      return;
+      i++;
+      continue;
     }
 
     if (line.startsWith("e ") && current) {
+      flushNarrativeBuffer("before", true);
       const parsed = parseDistanceLine(line);
       if (parsed) {
         current.system.distance = parsed.distance;
         current.system.target = parsed.target;
       }
-      return;
+      i++;
+      continue;
     }
 
-    if (abilityHeaderRegex.test(line)) {
+    const header = parseHeaderLine(line);
+    if (header) {
+      flushNarrativeBuffer("before", true);
+      flushNarrativeBuffer("after", true);
+
       if (current) {
         if (collectingTier && currentTier) {
           tierLines.push(`${currentTier} ${tierBuffer.join(" ")}`.trim());
@@ -45,7 +70,7 @@ export function parseMaliceText(rawText) {
         }
         finalizeEffectTable(current, tierLines);
         if (postTierLines.length) {
-          const afterHtml = postTierLines.map(l => `<p>${l}</p>`).join("");
+          const afterHtml = postTierLines.map(l => `<p>${enrichNarrative(l)}</p>`).join("");
           current.system.effect.after += afterHtml;
         }
         items.push(current);
@@ -54,37 +79,29 @@ export function parseMaliceText(rawText) {
         afterTierStarted = false;
       }
 
-      const maliceMatch = line.match(/^[a-z]\s+(.*?)\s+(\d+)\s+malice/i);
-      const signatureMatch = line.match(/^[a-z]\s+(.*?)\s+signature ability/i);
-
-      let name = "";
-      let cost = 0;
-
-      if (maliceMatch) {
-        name = maliceMatch[1].trim();
-        cost = parseInt(maliceMatch[2]);
-      } else if (signatureMatch) {
-        name = signatureMatch[1].trim();
-        cost = 0;
-      } else {
-        return;
-      }
-
+      const { name, cost, category } = header;
       const nextLine = lines[i + 1]?.trim();
-      const typeMatch = nextLine?.match(/^(.+?)\s+(Maneuver|Attack|Effect|Reaction|Action|Ability|Spell|Power|Main action)$/i);
+let type = "special";
+const keywords = [];
 
-      const keywords = [];
-      let type = "special";
+const keywordPhrases = [
+  "main action", "triggered action", "reaction", "maneuver",
+  "area", "melee", "ranged", "weapon", "magic"
+];
 
-      if (typeMatch) {
-        const rawKeywords = typeMatch[1]
-          .split(",")
-          .map(k => k.trim().replace(/\.$/, ""))
-          .filter(Boolean);
+const isKeywordLine = /^[A-Z][a-z]+(,\s*[A-Z][a-z]+)*\s+(Main|Triggered|Reaction|Maneuver) action$/i.test(nextLine);
 
-        keywords.push(...rawKeywords);
-        lines[i + 1] = ""; // prevent reprocessing
-      }
+
+if (isKeywordLine) {
+  const { type: parsedType, keywords: parsedKeywords } = parseKeywordLine(nextLine);
+  type = parsedType;
+  keywords.push(...parsedKeywords);
+  lines[i + 1] = ""; // prevent reprocessing
+} else {
+  // Start narrative buffering immediately
+  narrativeBuffer.push(nextLine);
+  lines[i + 1] = ""; // prevent reprocessing
+}
 
       current = {
         name,
@@ -125,11 +142,33 @@ export function parseMaliceText(rawText) {
           lastModifiedBy: null
         }
       };
-      return;
+
+      // Buffer narrative lines immediately after header
+      let j = i + 1;
+      while (j < lines.length) {
+        const nextLine = lines[j].trim();
+        if (/^[123áéí]\s+/.test(nextLine) || abilityHeaderRegex.test(nextLine) || nextLine.startsWith("e ")) break;
+
+        if (isNarrativeLine(nextLine)) {
+          narrativeBuffer.push(nextLine);
+          const joined = narrativeBuffer.join(" ");
+          const endsWithSentence = /[.!?]["']?$/.test(joined.trim());
+          if (endsWithSentence) {
+            current.system.effect.before += `<p>${enrichNarrative(joined.trim())}</p>`;
+            narrativeBuffer = [];
+          }
+        }
+
+        j++;
+      }
+
+      i = j;
+      continue;
     }
 
     const tierStart = line.match(/^([123áéí])\s+(.*)/);
     if (tierStart) {
+      flushNarrativeBuffer("before", true);
       if (collectingTier && currentTier) {
         tierLines.push(`${currentTier} ${tierBuffer.join(" ")}`.trim());
         tierBuffer = [];
@@ -137,7 +176,8 @@ export function parseMaliceText(rawText) {
       collectingTier = true;
       currentTier = tierStart[1];
       tierBuffer.push(tierStart[2]);
-      return;
+      i++;
+      continue;
     }
 
     if (collectingTier) {
@@ -151,31 +191,44 @@ export function parseMaliceText(rawText) {
         currentTier = "";
       } else {
         tierBuffer.push(line);
-        return;
+        i++;
+        continue;
       }
     }
 
-const tierLineMatch = line.match(/^([123áéí])\s+/);
-if (current && !collectingTier && tierLineMatch) {
-  afterTierStarted = true;
-}
-
-
+    const tierLineMatch = line.match(/^([123áéí])\s+/);
+    if (current && !collectingTier && tierLineMatch) {
+      flushNarrativeBuffer("before", true);
+      afterTierStarted = true;
+    }
 
     if (afterTierStarted && current) {
-  if (/^effect:/i.test(line)) {
-    const effectText = line.replace(/^effect:/i, "").trim();
-    current.system.effect.after += `<p>${enrichNarrative(effectText)}</p>`;
-  } else {
-    postTierLines.push(line);
-  }
-  return;
-}
-
-    if (current) {
-      current.system.effect.before += `<p>${enrichNarrative(line)}</p>`;
+      flushNarrativeBuffer("after");
+      if (/^effect:/i.test(line)) {
+        const effectText = line.replace(/^effect:/i, "").trim();
+        current.system.effect.after += `<p>${enrichNarrative(effectText)}</p>`;
+      } else {
+        postTierLines.push(line);
+      }
+      i++;
+      continue;
     }
-  });
+
+    if (current && isNarrativeLine(line)) {
+      narrativeBuffer.push(line);
+      const joined = narrativeBuffer.join(" ");
+      const endsWithSentence = /[.!?]["']?$/.test(joined.trim());
+      if (endsWithSentence) {
+        current.system.effect.before += `<p>${enrichNarrative(joined.trim())}</p>`;
+        narrativeBuffer = [];
+      }
+    }
+
+    i++;
+  }
+
+  flushNarrativeBuffer("before", true);
+  flushNarrativeBuffer("after", true);
 
   if (collectingTier && currentTier) {
     tierLines.push(`${currentTier} ${tierBuffer.join(" ")}`.trim());
@@ -184,7 +237,7 @@ if (current && !collectingTier && tierLineMatch) {
   if (current) {
     finalizeEffectTable(current, tierLines);
     if (postTierLines.length) {
-      const afterHtml = postTierLines.map(l => `<p>${l}</p>`).join("");
+      const afterHtml = postTierLines.map(l => `<p>${enrichNarrative(l)}</p>`).join("");
       current.system.effect.after += afterHtml;
     }
     items.push(current);

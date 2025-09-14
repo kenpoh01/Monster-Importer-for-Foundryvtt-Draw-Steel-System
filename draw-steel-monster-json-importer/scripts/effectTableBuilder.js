@@ -34,6 +34,7 @@ tierLines.forEach(line => {
     effectText = effectSplit[1].trim();
   }
 
+
   const enriched = enrichNarrative(rawText);
   const label = convertTierLabel(tier);
 
