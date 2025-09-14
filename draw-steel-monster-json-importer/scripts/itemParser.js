@@ -91,9 +91,7 @@ function normalizeDistance(raw = "") {
 
 function determineCategory(ability) {
   const costText = ability.cost?.toLowerCase() || "";
-  console.log("Ability Cost:", costText);
   const typeText = ability.type?.toLowerCase() || "";
-  console.log("Ability Type:", typeText);
   const rawCategory = ability.category?.toLowerCase();
 
   if (costText.includes("signature")) return "signature";
