@@ -81,7 +81,7 @@ export function parseMaliceText(rawText) {
 
       const { name, cost, category } = header;
       const nextLine = lines[i + 1]?.trim();
-let type = "special";
+let type = "none";
 const keywords = [];
 
 const keywordPhrases = [
