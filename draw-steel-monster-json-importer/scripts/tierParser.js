@@ -1,7 +1,8 @@
 // tierParser.js
 import { parseDamage } from "./damageParser.js";
-import { parseCondition } from "./conditionParser.js";
+import { parseConditionEffect } from "./conditionParser.js";
 import { parseMovement } from "./movementParser.js";
+import { characteristicMap } from "./keywordParser.js";
 
 export function parseTierText(text = "") {
   const result = {
@@ -10,11 +11,11 @@ export function parseTierText(text = "") {
     movement: null,
     condition: null,
     potency: null,
-    narrative: ""
+    narrative: "",
+    trigger: null
   };
 
   const original = text;
-
 
   // 🔥 Damage
   const damage = parseDamage(text);
@@ -36,26 +37,30 @@ export function parseTierText(text = "") {
     text = text.replace(/\b(slide|pull|push|shift)\s*\d+/i, "");
   }
 
-  // ⚠️ Condition
-  const condition = parseCondition(text);
-  if (condition) {
-    result.condition = condition.condition;
-    result.potency = condition.potency;
-    result.narrative = condition.narrative;
-  } else {
-    const leftover = text.replace(/[\.;]/g, "").trim();
-    if (leftover.length > 0) {
-      result.narrative = leftover;
-    }
-  }
+  // ⚠️ Triggered condition (e.g. "A < 1 the target is warped (save ends)")
+  const triggerMatch = text.match(/([ARMIP])\s*<\s*(\d+)\s+the target is ([a-z]+)(?:\s*\(save ends\))?/i);
+  if (triggerMatch) {
+    const [, statLetter, threshold, conditionText] = triggerMatch;
+    const stat = characteristicMap[statLetter.toUpperCase()] || "none";
+    const conditionData = parseConditionEffect(conditionText);
 
+    result.trigger = { stat, threshold: parseInt(threshold) };
+    result.condition = conditionData.condition;
+    result.potency = conditionData.saveEnds ? "saveEnds" : null;
+    result.narrative = conditionData.type === "other" ? conditionText : "";
+  } else {
+    // ⚠️ General condition or narrative
+    const conditionData = parseConditionEffect(text);
+    result.condition = conditionData.condition;
+    result.potency = conditionData.saveEnds ? "saveEnds" : null;
+    result.narrative = conditionData.type === "other" ? text.replace(/[\.;]/g, "").trim() : "";
+  }
 
   return result;
 }
 
 export function parseTarget(targetText) {
   if (!targetText || typeof targetText !== "string") return { type: "special", value: null };
-
 
   const numberWords = {
     one: 1, two: 2, three: 3, four: 4, five: 5,
@@ -67,14 +72,12 @@ export function parseTarget(targetText) {
 
   for (const [word, num] of Object.entries(numberWords)) {
     if (lower.includes(word)) {
-
       value = num;
       break;
     }
   }
 
   if (lower.includes("all") || lower.includes("each") || lower.includes("every")) {
-
     value = null;
   }
 
@@ -91,15 +94,4 @@ export function parseTarget(targetText) {
   else if (lower.includes("self")) type = "self";
 
   return { type, value };
-}
-
-export function mapCharacteristic(letter) {
-  const map = {
-    m: "might",
-    a: "agility",
-    r: "reason",
-    i: "intuition",
-    p: "presence"
-  };
-  return map[letter?.toLowerCase()] || "none";
 }

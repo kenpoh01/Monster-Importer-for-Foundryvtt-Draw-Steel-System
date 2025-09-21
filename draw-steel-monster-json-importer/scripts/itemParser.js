@@ -1,4 +1,5 @@
-import { parseTierText, parseTarget, mapCharacteristic } from "./tierParser.js";
+import { parseTierText, parseTarget } from "./tierParser.js";
+import { characteristicMap } from "./keywordParser.js";
 
 function normalizeType(type = "", cost = "") {
   const map = {
@@ -244,9 +245,7 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
             display: i === 0 ? `{{potency}} ${parsed.condition} ${parsed.narrative || "(save ends)"}`.trim() : "",
             potency: {
               value: potencyMap[i],
-              characteristic: parsed.potency
-                ? mapCharacteristic(parsed.potency[0])
-                : highestCharacteristic
+              characteristic: parsed.trigger?.stat || highestCharacteristic
             },
             effects: {
               [parsed.condition]: {

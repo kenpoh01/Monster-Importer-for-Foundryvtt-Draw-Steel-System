@@ -1,17 +1,13 @@
+import {
+  validRoles,
+  validOrganizations,
+  validMovementTypes,
+  validAncestryKeywords,
+  allConditions,
+  durationMap
+} from "./keywordParser.js";
+
 export function parseMonsterCore(rawData) {
-  const validRoles = [
-    "ambusher", "artillery", "brute", "controller", "defender",
-    "harrier", "hexer", "leader", "minion", "mount", "solo", "support"
-  ];
-
-  const validOrganizations = ["minion", "horde", "platoon", "elite", "leader", "solo"];
-  const validMovementTypes = ["walk", "fly", "swim", "burrow", "climb", "teleport"];
-  const validKeywords = [
-    "abyssal", "accursed", "animal", "beast", "construct", "dragon",
-    "elemental", "fey", "giant", "horror", "humanoid", "infernal",
-    "plant", "swarm", "undead"
-  ];
-
   // Extract role and organization from first role string
   const roleParts = rawData.roles?.[0]?.toLowerCase().split(" ") || [];
   const organization = roleParts.find(part => validOrganizations.includes(part));
@@ -24,7 +20,7 @@ export function parseMonsterCore(rawData) {
 
 
   // Keywords
-  const filteredKeywords = rawData.ancestry?.map(k => k.toLowerCase()).filter(k => validKeywords.includes(k)) || [];
+const filteredKeywords = rawData.ancestry?.map(k => k.toLowerCase()).filter(k => validAncestryKeywords.includes(k)) || [];
 
   // Poison immunity value
   const poisonValue = Number(rawData.immunities?.find(i => i.toLowerCase().includes("poison"))?.match(/\d+/)?.[0]) || 0;
