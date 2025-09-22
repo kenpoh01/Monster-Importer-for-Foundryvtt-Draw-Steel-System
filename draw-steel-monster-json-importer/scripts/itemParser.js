@@ -92,7 +92,6 @@ function normalizeDistance(raw = "") {
 
 function determineCategory(ability) {
   const costText = ability.cost?.toLowerCase() || "";
-  const typeText = ability.type?.toLowerCase() || "";
   const rawCategory = ability.category?.toLowerCase();
 
   if (costText.includes("signature")) return "signature";
@@ -103,7 +102,20 @@ function determineCategory(ability) {
   return "";
 }
 
+function formatNarrativeBlock(block) {
+  if (!block?.effect) return "";
 
+  let text = block.effect.trim();
+  if (text.toLowerCase().startsWith("effect:")) {
+    text = text.slice(7).trim(); // Remove "Effect:" prefix
+  }
+
+  if (block.name && block.name.toLowerCase() !== "effect") {
+    return `<p><strong>${block.name}:</strong> ${text}</p>`;
+  }
+
+  return `<p>${text}</p>`;
+}
 
 export function parseItems(traits = [], abilities = [], rawData = {}) {
   const items = [];
@@ -173,8 +185,16 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
   });
 
   abilities.forEach((ability, index) => {
-    const damageEffect = ability.effects?.find(e => e.roll);
-    const narrativeEffect = ability.effects?.find(e => e.effect);
+    const damageIndex = ability.effects.findIndex(e => e.t1 || e.t2 || e.t3);
+    const damageEffect = ability.effects[damageIndex];
+    const tieredDamage = {
+      t1: damageEffect?.t1,
+      t2: damageEffect?.t2,
+      t3: damageEffect?.t3
+    };
+
+    const beforeEffects = ability.effects.slice(0, damageIndex);
+    const afterEffects = ability.effects.slice(damageIndex + 1);
 
     const costText = ability.cost?.toLowerCase() || "";
     const isMalice = costText.includes("malice");
@@ -183,10 +203,9 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
     const category = determineCategory(ability);
     const resource = isMalice ? maliceValue : null;
 
-    const effects = {};
     const effectGroups = {};
 
-    [damageEffect?.t1, damageEffect?.t2, damageEffect?.t3].forEach((text, i) => {
+    [tieredDamage.t1, tieredDamage.t2, tieredDamage.t3].forEach((text, i) => {
       if (!text) return;
       const tier = `tier${i + 1}`;
       const potency = {
@@ -277,14 +296,39 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
         }
       });
     });
-
-    const normalizedType = normalizeType(ability.type, ability.cost);
+	
+	    const normalizedType = normalizeType(ability.type, ability.cost);
     const distance = normalizeDistance(ability.distance || "");
 
     const finalEffects = {};
     Object.values(effectGroups).forEach(e => {
       finalEffects[e._id] = e;
     });
+
+    const effectBefore = beforeEffects.map(formatNarrativeBlock).join("");
+    const effectAfter = afterEffects.map(block => {
+  if (!block?.effect) return "";
+
+  let text = block.effect.trim();
+
+  // Strip leading "Effect:" if present
+  if (text.toLowerCase().startsWith("effect:")) {
+    text = text.slice(7).trim();
+  }
+
+  // Prepend cost as bold label if present
+  if (block.cost) {
+    text = `<strong>${block.cost}:</strong> ${text}`;
+  }
+
+  // If name is present and not "Effect", wrap with label
+  if (block.name && block.name.toLowerCase() !== "effect") {
+    return `<p><strong>${block.name}:</strong> ${text}</p>`;
+  }
+
+  // Otherwise just wrap the text
+  return `<p>${text}</p>`;
+}).join("");
 
     items.push({
       name: ability.name || `Ability ${index + 1}`,
@@ -305,11 +349,11 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
           effects: finalEffects
         },
         effect: {
-          before: "",
-          after: narrativeEffect?.effect ? `<p>${narrativeEffect.effect}</p>` : ""
+          before: effectBefore,
+          after: effectAfter
         },
         spend: {
-          text: narrativeEffect?.cost || "",
+          text: "",
           value: null
         },
         source: {
