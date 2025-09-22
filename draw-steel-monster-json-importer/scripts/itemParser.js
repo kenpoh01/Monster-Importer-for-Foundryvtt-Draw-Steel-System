@@ -306,27 +306,32 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
     });
 
     const effectBefore = beforeEffects.map(formatNarrativeBlock).join("");
-    const effectAfter = afterEffects.map(block => {
+
+let spendText = "";
+let spendValue = null;
+
+// Find and extract the spend block
+const spendBlockIndex = afterEffects.findIndex(b => b?.cost);
+if (spendBlockIndex !== -1) {
+  const spendBlock = afterEffects.splice(spendBlockIndex, 1)[0];
+  spendText = spendBlock.effect?.trim() || "";
+  spendValue = Number(spendBlock.cost.match(/\d+/)?.[0]) || null;
+}
+
+// Now format the remaining blocks into effect.after
+const effectAfter = afterEffects.map(block => {
   if (!block?.effect) return "";
 
   let text = block.effect.trim();
 
-  // Strip leading "Effect:" if present
   if (text.toLowerCase().startsWith("effect:")) {
     text = text.slice(7).trim();
   }
 
-  // Prepend cost as bold label if present
-  if (block.cost) {
-    text = `<strong>${block.cost}:</strong> ${text}`;
-  }
-
-  // If name is present and not "Effect", wrap with label
   if (block.name && block.name.toLowerCase() !== "effect") {
     return `<p><strong>${block.name}:</strong> ${text}</p>`;
   }
 
-  // Otherwise just wrap the text
   return `<p>${text}</p>`;
 }).join("");
 
@@ -352,10 +357,10 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
           before: effectBefore,
           after: effectAfter
         },
-        spend: {
-          text: "",
-          value: null
-        },
+       spend: {
+			text: spendText,
+			value: spendValue
+		},
         source: {
           book: "Monsters",
           license: "Draw Steel Creator License",
