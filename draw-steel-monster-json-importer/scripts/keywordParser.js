@@ -4,10 +4,6 @@ export const characteristicMap = {
   A: "agility", R: "reason", M: "might", I: "intuition", P: "presence"
 };
 
-
-
-// ✅ Centralized vocabularies for monster schema
-
 export const validRoles = [
   "ambusher", "artillery", "brute", "controller", "defender",
   "harrier", "hexer", "leader", "minion", "mount", "solo", "support"
@@ -35,8 +31,15 @@ export const supportedConditions = new Set([
 // ✅ Custom effects not listed in Heroes book p.77
 export const customEffectRegistry = new Set([
   "warped", "dragonsealed", "entangled", "phased", "corrupted",
-  "marked", "unstable", "banished", "fractured"
+  "marked", "unstable", "banished", "fractured", "blood soaked", "immolated"
 ]);
+
+
+export const allConditions = new Set([
+  ...supportedConditions,
+  ...customEffectRegistry
+]);
+
 
 // ✅ Duration keywords used in condition and effect parsing
 export const durationMap = {
@@ -50,11 +53,6 @@ export const durationMap = {
   "until end of encounter": "endOfEncounter"
 };
 
-
-export const allConditions = new Set([
-  ...supportedConditions,
-  ...customEffectRegistry
-]);
 
 /**
  * Checks whether a given text contains a known custom effect.
@@ -79,6 +77,7 @@ export function isLikelyKeywordLine(line) {
 }
 
 export function parseKeywordLine(line) {
+	//This type = special is for types of abilities and should remain special
   let type = "special";
   const keywords = [];
 

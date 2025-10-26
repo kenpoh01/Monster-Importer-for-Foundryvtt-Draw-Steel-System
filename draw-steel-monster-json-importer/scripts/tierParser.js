@@ -37,8 +37,8 @@ export function parseTierText(text = "") {
     text = text.replace(/\b(slide|pull|push|shift)\s*\d+/i, "");
   }
 
-  // ⚠️ Triggered condition (e.g. "A < 1 the target is warped (save ends)")
-  const triggerMatch = text.match(/([ARMIP])\s*<\s*(\d+)\s+the target is ([a-z]+)(?:\s*\(save ends\))?/i);
+  // ⚠️ Triggered condition (e.g. "A < 1 the target is warped (save ends)", or M < 2 the target is blood soaked (save ends)"
+  const triggerMatch = text.match(/([ARMIP])\s*<\s*(\d+)\s+the target is ([a-z]+(?:\s+[a-z]+)*)(?:\s*\(save ends\))?/i);
   if (triggerMatch) {
     const [, statLetter, threshold, conditionText] = triggerMatch;
     const stat = characteristicMap[statLetter.toUpperCase()] || "none";

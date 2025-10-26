@@ -224,7 +224,8 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
           : parsed.movement
           ? "forced"
           : parsed.narrative
-          ? "special"
+		  //changed from special to other
+          ? "other"
           : null;
 
         if (!effectType) return;
@@ -237,8 +238,9 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
             ? parsed.condition.charAt(0).toUpperCase() + parsed.condition.slice(1)
             : effectType === "forced"
             ? parsed.movement?.name
-            : effectType === "special"
-            ? "Special"
+			//changed from special to other (not sure about this one)
+            : effectType === "other"
+            ? "other"
             : "",
           img: null
         };
@@ -286,10 +288,10 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
             potency
           };
         }
-
-        if (effectType === "special") {
-          effect.special = effect.special || {};
-          effect.special[tier] = {
+//changed from special to other
+        if (effectType === "other") {
+          effect.other = effect.other || {};
+          effect.other[tier] = {
             display: parsed.narrative,
             potency
           };
