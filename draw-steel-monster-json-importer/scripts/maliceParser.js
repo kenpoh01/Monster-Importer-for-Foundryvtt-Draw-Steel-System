@@ -4,7 +4,10 @@ import { parseTarget } from "./tierParser.js";
 import { enrichNarrative } from "./narrativeUtils.js";
 import { finalizeEffectTable } from "./effectTableBuilder.js";
 import { parseHeaderLine } from "./headerParser.js";
-import { parseKeywordLine, isNarrativeLine } from "./keywordParser.js";
+import { parseKeywordLine, isNarrativeLine, supportedConditions } from "./keywordParser.js";
+import { parseConditionEffect } from "./conditionParser.js";
+
+
 
 export function parseMaliceText(rawText) {
   const lines = rawText.split("\n").map(l => l.trim());
@@ -70,7 +73,17 @@ export function parseMaliceText(rawText) {
         }
         finalizeEffectTable(current, tierLines);
         if (postTierLines.length) {
-          const afterHtml = postTierLines.map(l => `<p>${enrichNarrative(l)}</p>`).join("");
+  
+
+  const afterHtml = postTierLines
+  .filter(line => {
+    const parsed = parseConditionEffect(line);
+    return !(parsed.condition && supportedConditions.has(parsed.condition));
+  })
+  .map(l => `<p>${enrichNarrative(l)}</p>`)
+  .join("");
+  
+  
           current.system.effect.after += afterHtml;
         }
         items.push(current);
@@ -127,7 +140,6 @@ if (isKeywordLine) {
             license: "Draw Steel Creator License",
             revision: 1
           },
-          _dsid: name.toLowerCase().replace(/\s+/g, "-"),
           story: "",
           keywords
         },
@@ -204,10 +216,20 @@ if (isKeywordLine) {
 
     if (afterTierStarted && current) {
       flushNarrativeBuffer("after");
-      if (/^effect:/i.test(line)) {
-        const effectText = line.replace(/^effect:/i, "").trim();
-        current.system.effect.after += `<p>${enrichNarrative(effectText)}</p>`;
-      } else {
+
+
+if (/^effect:/i.test(line)) {
+  const effectText = line.replace(/^effect:/i, "").trim();
+  const parsed = parseConditionEffect(effectText);
+
+  // Suppress enrichable conditions
+  if (parsed.condition && supportedConditions.has(parsed.condition)) {
+    i++;
+    continue;
+  }
+
+  current.system.effect.after += `<p>${enrichNarrative(effectText)}</p>`;
+} else {
         postTierLines.push(line);
       }
       i++;

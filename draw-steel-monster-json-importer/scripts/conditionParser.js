@@ -1,4 +1,4 @@
-import { allConditions, durationMap } from "./keywordParser.js";
+import { allConditions, durationMap, supportedConditions } from "./keywordParser.js";
 
 /**
  * Parses a condition effect line and returns structured data.
@@ -6,21 +6,28 @@ import { allConditions, durationMap } from "./keywordParser.js";
  */
 export function parseConditionEffect(text) {
   const lowered = text.toLowerCase();
+
   for (const condition of allConditions) {
     if (lowered.includes(condition)) {
+      const enrichable = supportedConditions.has(condition);
       return {
         condition,
         type: "applied",
-        saveEnds: lowered.includes("save ends")
+        saveEnds: lowered.includes("save ends"),
+        enrichable // internal use only
       };
     }
   }
+
   return {
     condition: null,
     type: "other",
-    saveEnds: false
+    saveEnds: false,
+    enrichable: false
   };
 }
+
+
 
 /**
  * Attempts to extract a duration tag from the effect text.

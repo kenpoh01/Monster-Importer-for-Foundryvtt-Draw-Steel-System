@@ -1,6 +1,7 @@
 // effectTableBuilder.js
 import { enrichNarrative } from "./narrativeUtils.js";
 import { parseDuration } from "./durationParser.js";
+import { supportedConditions } from "./keywordParser.js";
 
 
 
@@ -45,11 +46,17 @@ tierLines.forEach(line => {
   }
 
   const conditionMatch = enriched.match(/\b(weakened|restrained|frightened|bleeding|slowed|taunted|dazed)\b/i);
-  if (conditionMatch) {
-    const durationData = parseDuration(enriched);
+if (conditionMatch) {
+  const condition = conditionMatch[1].toLowerCase();
 
-    activeEffects.push({
-      name: conditionMatch[1].charAt(0).toUpperCase() + conditionMatch[1].slice(1),
+  // Suppress enrichable conditions
+  if (supportedConditions.has(condition)) return;
+
+  const durationData = parseDuration(enriched);
+
+  activeEffects.push({
+    name: condition.charAt(0).toUpperCase() + condition.slice(1),
+
       img: "icons/svg/downgrade.svg",
       origin: null,
       transfer: false,

@@ -1,5 +1,6 @@
 import { parseTierText, parseTarget } from "./tierParser.js";
-import { characteristicMap } from "./keywordParser.js";
+import { characteristicMap, supportedConditions } from "./keywordParser.js";
+import { parseConditionEffect } from "./conditionParser.js";
 
 function normalizeType(type = "", cost = "") {
   const map = {
@@ -321,11 +322,15 @@ if (spendBlockIndex !== -1) {
 }
 
 // Now format the remaining blocks into effect.after
+
+
 const effectAfter = afterEffects.map(block => {
   if (!block?.effect) return "";
 
-  let text = block.effect.trim();
+  const parsed = parseConditionEffect(block.effect);
+  if (parsed.condition && supportedConditions.has(parsed.condition)) return ""; // suppress enrichable
 
+  let text = block.effect.trim();
   if (text.toLowerCase().startsWith("effect:")) {
     text = text.slice(7).trim();
   }
