@@ -25,6 +25,7 @@ function getImageForType(type, itemType) {
     ability: {
       main: "icons/skills/melee/strike-polearm-glowing-white.webp",
       maneuver: "icons/magic/air/air-pressure-shield-blue.webp",
+	  freeTriggered: "icons/magic/air/air-wave-gust-blue.webp",
       triggered: "icons/skills/movement/arrow-upward-yellow.webp",
       none: "icons/magic/unholy/silhouette-robe-evil-power.webp",
       villain: "icons/magic/death/skull-horned-worn-fire-blue.webp"
@@ -179,7 +180,6 @@ export function parseItems(traits = [], abilities = [], rawData = {}) {
           license: "Draw Steel Creator License",
           revision: 1
         },
-        _dsid: trait.name?.toLowerCase().replace(/\s+/g, "-") || `trait-${index}`,
         advancements: {}
       }
     });
@@ -374,7 +374,6 @@ const effectAfter = afterEffects.map(block => {
           revision: 1,
           page: ability.page || ""
         },
-        _dsid: ability.name?.toLowerCase().replace(/\s+/g, "-") || `ability-${index}`,
         story: "",
         resource,
         trigger: ability.trigger || ""

@@ -23,7 +23,7 @@
     }
   ],
   "packs": [],
-  "url": "",
-  "manifest": "",
+  "url": "https://github.com/kenpoh01/Monster-Importer-for-Foundryvtt-Draw-Steel-System",
+  "manifest": "https://raw.githubusercontent.com/kenpoh01/Monster-Importer-for-Foundryvtt-Draw-Steel-System/refs/heads/main/draw-steel-monster-json-importer/module.json",
   "download": ""
 }
